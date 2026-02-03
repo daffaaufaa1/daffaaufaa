@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, Upload, CheckCircle, XCircle, MapPin, RotateCcw } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Upload, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,6 @@ const Absensi: React.FC = () => {
   const [photo, setPhoto] = useState<string | null>(null);
   const [permitFile, setPermitFile] = useState<File | null>(null);
   const [notes, setNotes] = useState('');
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationVerified, setLocationVerified] = useState(false);
   const [faceVerified, setFaceVerified] = useState(false);
   const [headTurnDetected, setHeadTurnDetected] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,28 +27,6 @@ const Absensi: React.FC = () => {
 
   // Allow attendance 24 hours (no time restriction for now)
   const canAttend = true;
-
-  // Get user location
-  const getLocation = useCallback(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          // For demo, we'll verify any location
-          setLocationVerified(true);
-          toast.success('Lokasi terverifikasi!');
-        },
-        (error) => {
-          toast.error('Gagal mendapatkan lokasi: ' + error.message);
-        }
-      );
-    } else {
-      toast.error('Geolocation tidak didukung browser ini');
-    }
-  }, []);
 
   // Start camera
   const startCamera = async () => {
@@ -63,7 +39,6 @@ const Absensi: React.FC = () => {
         videoRef.current.srcObject = mediaStream;
       }
       setStep('camera');
-      getLocation();
     } catch (error) {
       toast.error('Gagal mengakses kamera');
       console.error(error);
@@ -297,14 +272,8 @@ const Absensi: React.FC = () => {
                   <div className="w-48 h-60 border-4 border-white/50 rounded-full" />
                 </div>
 
-                {/* Status indicators */}
-                <div className="absolute top-4 left-4 space-y-2">
-                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                    locationVerified ? 'bg-green-500/90 text-white' : 'bg-white/90'
-                  }`}>
-                    <MapPin className="h-4 w-4" />
-                    {locationVerified ? 'Lokasi OK' : 'Mengambil lokasi...'}
-                  </div>
+                {/* Status indicator */}
+                <div className="absolute top-4 left-4">
                   <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
                     faceVerified ? 'bg-green-500/90 text-white' : 'bg-white/90'
                   }`}>
@@ -318,7 +287,6 @@ const Absensi: React.FC = () => {
                 <Button
                   onClick={capturePhoto}
                   className="w-full gradient-primary text-white"
-                  disabled={!locationVerified}
                 >
                   <Camera className="mr-2 h-4 w-4" />
                   Ambil Foto
