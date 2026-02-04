@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { Camera, Upload, CheckCircle, XCircle, RotateCcw, Sparkles, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -171,25 +171,33 @@ const Absensi: React.FC = () => {
 
   if (step === 'success') {
     return (
-      <div className="max-w-2xl mx-auto">
-        <Card className="shadow-elegant border-0">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4 animate-float">
-              <CheckCircle className="h-8 w-8 text-green-500" />
+      <div className="max-w-2xl mx-auto animate-in fade-in duration-500">
+        <Card className="shadow-elegant border-0 overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-emerald-500 to-teal-500" />
+          <CardHeader className="text-center pt-8">
+            <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center mb-4 animate-float shadow-lg">
+              <CheckCircle className="h-10 w-10 text-emerald-500" />
             </div>
-            <CardTitle className="text-green-600">Absensi Berhasil!</CardTitle>
-            <CardDescription>
-              Kehadiran Anda telah tercatat pada {new Date().toLocaleDateString('id-ID', {
+            <CardTitle className="text-2xl text-emerald-600">Absensi Berhasil!</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Kehadiran Anda telah tercatat pada
+            </CardDescription>
+            <p className="font-semibold text-foreground mt-1">
+              {new Date().toLocaleDateString('id-ID', {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
               })}
-            </CardDescription>
+            </p>
           </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => window.location.reload()} className="gradient-primary text-white">
-              Kembali
+          <CardContent className="text-center pb-8">
+            <div className="flex items-center justify-center gap-2 text-muted-foreground mb-6">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-sm">Terima kasih telah melakukan absensi</span>
+            </div>
+            <Button onClick={() => window.location.reload()} className="gradient-primary text-white shadow-elegant">
+              Kembali ke Dashboard
             </Button>
           </CardContent>
         </Card>
@@ -198,11 +206,28 @@ const Absensi: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-500">
+      {/* Info Banner */}
+      <Card className="shadow-card border-0 bg-gradient-to-r from-primary/5 to-accent/5">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Sistem Absensi Aktif 24 Jam</p>
+              <p className="text-xs text-muted-foreground">Verifikasi wajah diperlukan untuk kehadiran</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-elegant border-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5 text-primary" />
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Camera className="h-5 w-5 text-primary" />
+            </div>
             Absensi Harian
           </CardTitle>
           <CardDescription>

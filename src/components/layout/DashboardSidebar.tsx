@@ -5,7 +5,8 @@ import {
   BookOpen, 
   FileSpreadsheet, 
   ClipboardList,
-  Home
+  Home,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavLink } from '@/components/NavLink';
@@ -49,6 +50,21 @@ const DashboardSidebar: React.FC = () => {
       collapsible="icon"
     >
       <SidebarContent className="py-4">
+        {/* Logo Section */}
+        {!collapsed && (
+          <div className="px-4 mb-6">
+            <div className="flex items-center gap-2 text-white">
+              <div className="p-2 rounded-lg bg-white/20 backdrop-blur">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-bold text-sm">FADAM SCHOOL</h2>
+                <p className="text-[10px] text-white/60">Sistem Absensi Digital</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel className="text-white/70 uppercase text-xs tracking-wider px-4 mb-2">
             {!collapsed && 'Menu Utama'}
@@ -78,6 +94,19 @@ const DashboardSidebar: React.FC = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* System Status */}
+        {!collapsed && (
+          <div className="mt-auto px-4 py-4">
+            <div className="bg-white/10 rounded-xl p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-white/80 text-xs font-medium">Sistem Aktif 24 Jam</span>
+              </div>
+              <p className="text-white/50 text-[10px] mt-1">Semua fitur tersedia</p>
+            </div>
+          </div>
+        )}
       </SidebarContent>
     </Sidebar>
   );
