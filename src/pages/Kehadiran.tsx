@@ -8,11 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Attendance, AttendanceStatus, Class } from '@/types/database';
-import { UserProfile } from '@/types/auth';
+import { Attendance, AttendanceStatus } from '@/types/database';
+import { ClassData, Student } from '@/types/auth';
 
-interface AttendanceWithProfile extends Attendance {
-  profile?: UserProfile;
+interface AttendanceWithStudent extends Attendance {
+  student?: Student;
 }
 
 const statusColors: Record<AttendanceStatus, string> = {
@@ -30,18 +30,14 @@ const statusLabels: Record<AttendanceStatus, string> = {
 };
 
 const Kehadiran: React.FC = () => {
-  const { authUser, user } = useAuth();
-  const [attendanceData, setAttendanceData] = useState<AttendanceWithProfile[]>([]);
+  const { user, isGuru, isSiswa } = useAuth();
+  const [attendanceData, setAttendanceData] = useState<AttendanceWithStudent[]>([]);
   const [myAttendance, setMyAttendance] = useState<Attendance[]>([]);
-  const [classAttendance, setClassAttendance] = useState<AttendanceWithProfile[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
+  const [classes, setClasses] = useState<ClassData[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth().toString());
   const [loading, setLoading] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
-
-  const isGuru = authUser?.role === 'guru';
-  const myClass = authUser?.profile?.class;
 
   const months = [
     { value: '0', label: 'Januari' },
@@ -88,64 +84,31 @@ const Kehadiran: React.FC = () => {
     if (myData) setMyAttendance(myData);
 
     // For teachers, fetch attendance based on selected class
-    if (isGuru) {
-      if (selectedClass) {
-        // Fetch all attendance for the month
-        const { data: allData } = await supabase
+    if (isGuru && selectedClass) {
+      // Fetch students in this class
+      const { data: students } = await supabase
+        .from('students')
+        .select('*')
+        .eq('class_id', selectedClass);
+
+      if (students) {
+        const studentIds = students.map(s => s.id);
+        
+        // Fetch attendance for these students
+        const { data: attendances } = await supabase
           .from('attendance')
           .select('*')
+          .in('user_id', studentIds)
           .gte('date', startDate)
           .lte('date', endDate)
           .order('date', { ascending: false });
 
-        if (allData) {
-          // Fetch profiles for selected class
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('class', selectedClass);
-
-          const classUserIds = profiles?.map((p) => p.user_id) || [];
-          
-          const attendanceWithProfiles = allData
-            .filter((a) => classUserIds.includes(a.user_id))
-            .map((attendance) => ({
-              ...attendance,
-              profile: profiles?.find((p) => p.user_id === attendance.user_id),
-            }));
-
-          setAttendanceData(attendanceWithProfiles);
-        }
-      } else {
-        setAttendanceData([]);
-      }
-    } else {
-      // For students, fetch class attendance only for their class
-      if (myClass) {
-        const { data: allData } = await supabase
-          .from('attendance')
-          .select('*')
-          .gte('date', startDate)
-          .lte('date', endDate)
-          .order('date', { ascending: false });
-
-        if (allData) {
-          // Fetch profiles for student's class
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('class', myClass);
-
-          const classUserIds = profiles?.map((p) => p.user_id) || [];
-          
-          const attendanceWithProfiles = allData
-            .filter((a) => classUserIds.includes(a.user_id))
-            .map((attendance) => ({
-              ...attendance,
-              profile: profiles?.find((p) => p.user_id === attendance.user_id),
-            }));
-
-          setClassAttendance(attendanceWithProfiles);
+        if (attendances) {
+          const attendanceWithStudents = attendances.map(a => ({
+            ...a,
+            student: students.find(s => s.id === a.user_id),
+          }));
+          setAttendanceData(attendanceWithStudents);
         }
       }
     }
@@ -170,17 +133,12 @@ const Kehadiran: React.FC = () => {
                 tr:nth-child(even) { background-color: #f9fafb; }
                 h1 { text-align: center; color: #1f2937; }
                 .header { text-align: center; margin-bottom: 20px; }
-                .status-h { background-color: #dcfce7; color: #166534; }
-                .status-i { background-color: #dbeafe; color: #1e40af; }
-                .status-s { background-color: #fef3c7; color: #92400e; }
-                .status-a { background-color: #fee2e2; color: #991b1b; }
               </style>
             </head>
             <body>
               <div class="header">
                 <h1>FADAM SCHOOL</h1>
                 <h2>Rekap Kehadiran ${months.find(m => m.value === selectedMonth)?.label} ${new Date().getFullYear()}</h2>
-                ${selectedClass ? `<h3>Kelas: ${selectedClass}</h3>` : ''}
               </div>
               ${printContent.innerHTML}
             </body>
@@ -198,28 +156,13 @@ const Kehadiran: React.FC = () => {
     </Badge>
   );
 
-  // Group attendance by student for better display
-  const groupedByStudent = (data: AttendanceWithProfile[]) => {
-    const grouped: { [key: string]: { profile: UserProfile; records: AttendanceWithProfile[] } } = {};
-    data.forEach((record) => {
-      const key = record.user_id;
-      if (!grouped[key]) {
-        grouped[key] = { profile: record.profile!, records: [] };
-      }
-      grouped[key].records.push(record);
-    });
-    return Object.values(grouped).sort((a, b) => 
-      a.profile.full_name.localeCompare(b.profile.full_name)
-    );
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Rekap Kehadiran</h1>
           <p className="text-muted-foreground">
-            {isGuru ? 'Lihat rekap kehadiran siswa dan guru' : 'Lihat riwayat kehadiran kelas Anda'}
+            {isGuru ? 'Lihat rekap kehadiran siswa' : 'Lihat riwayat kehadiran Anda'}
           </p>
         </div>
         <Button variant="outline" onClick={handlePrint}>
@@ -248,7 +191,7 @@ const Kehadiran: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {classes.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.name}>
+                          <SelectItem key={cls.id} value={cls.id}>
                             {cls.name}
                           </SelectItem>
                         ))}
@@ -321,7 +264,7 @@ const Kehadiran: React.FC = () => {
                           <TableRow key={attendance.id}>
                             <TableCell className="text-center text-muted-foreground">{index + 1}</TableCell>
                             <TableCell className="font-medium">
-                              {attendance.profile?.full_name || 'Unknown'}
+                              {attendance.student?.full_name || 'Unknown'}
                             </TableCell>
                             <TableCell className="text-center text-muted-foreground">
                               {new Date(attendance.date).toLocaleDateString('id-ID', {
@@ -420,7 +363,6 @@ const Kehadiran: React.FC = () => {
           </TabsContent>
         </Tabs>
       ) : (
-        // Student view - show class attendance only
         <Card className="shadow-card">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -429,9 +371,9 @@ const Kehadiran: React.FC = () => {
                   <div className="p-2 rounded-lg bg-primary/10">
                     <ClipboardList className="h-4 w-4 text-primary" />
                   </div>
-                  Kehadiran Kelas {myClass || '-'}
+                  Kehadiran Saya
                 </CardTitle>
-                <CardDescription>H = Hadir, I = Izin, S = Sakit, A = Alpha</CardDescription>
+                <CardDescription>Riwayat kehadiran Anda</CardDescription>
               </div>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-[150px] rounded-xl">
@@ -449,45 +391,34 @@ const Kehadiran: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div ref={printRef}>
-              {!myClass ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
-                    <Users className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <p>Kelas Anda belum diatur</p>
-                  <p className="text-sm mt-1">Silakan update biodata untuk mengatur kelas Anda</p>
-                </div>
-              ) : loading ? (
-                <div className="text-center py-8 text-muted-foreground">Memuat data...</div>
-              ) : classAttendance.length === 0 ? (
+              {myAttendance.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
                     <ClipboardList className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <p>Belum ada data kehadiran bulan ini</p>
+                  <p>Belum ada data kehadiran</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="w-12 text-center font-semibold">No</TableHead>
-                      <TableHead>Nama</TableHead>
-                      <TableHead className="w-28 text-center font-semibold">Tanggal</TableHead>
-                      <TableHead className="w-20 text-center font-semibold">Status</TableHead>
-                      <TableHead className="w-24 text-center font-semibold">Jam</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead className="text-center font-semibold">Status</TableHead>
+                      <TableHead className="text-center font-semibold">Jam Masuk</TableHead>
+                      <TableHead>Keterangan</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {classAttendance.map((attendance, index) => (
+                    {myAttendance.map((attendance, index) => (
                       <TableRow key={attendance.id}>
                         <TableCell className="text-center text-muted-foreground">{index + 1}</TableCell>
-                        <TableCell className="font-medium">
-                          {attendance.profile?.full_name || 'Unknown'}
-                        </TableCell>
-                        <TableCell className="text-center text-muted-foreground">
+                        <TableCell>
                           {new Date(attendance.date).toLocaleDateString('id-ID', {
+                            weekday: 'long',
                             day: 'numeric',
-                            month: 'short',
+                            month: 'long',
+                            year: 'numeric',
                           })}
                         </TableCell>
                         <TableCell className="text-center">
@@ -496,6 +427,7 @@ const Kehadiran: React.FC = () => {
                         <TableCell className="text-center text-muted-foreground">
                           {attendance.check_in_time?.slice(0, 5) || '-'}
                         </TableCell>
+                        <TableCell className="text-muted-foreground">{attendance.notes || '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
