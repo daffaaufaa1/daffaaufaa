@@ -1,25 +1,36 @@
-export type UserRole = 'guru' | 'siswa' | 'pengurus_kelas';
+export type UserRole = 'admin' | 'guru' | 'siswa';
 
-export interface UserProfile {
+export interface AppUser {
   id: string;
-  user_id: string;
+  identifier: string; // NIS untuk siswa, NIT untuk guru, username untuk admin
+  role: UserRole;
+  name: string;
+  class_id?: string;
+  class_name?: string;
+  subject?: string; // untuk guru
+}
+
+export interface Student {
+  id: string;
+  nis: string;
   full_name: string;
-  class: string | null;
-  avatar_url: string | null;
+  class_id: string | null;
+  class_name?: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface UserRoleRecord {
+export interface Teacher {
   id: string;
-  user_id: string;
-  role: UserRole;
+  nit: string;
+  full_name: string;
+  subject: string;
   created_at: string;
+  updated_at: string;
 }
 
-export interface AuthUser {
+export interface ClassData {
   id: string;
-  email: string;
-  profile: UserProfile | null;
-  role: UserRole | null;
+  name: string;
+  created_at: string;
 }
