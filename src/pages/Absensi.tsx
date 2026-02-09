@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useFaceDetection } from '@/hooks/useFaceDetection';
 
 const Absensi: React.FC = () => {
-  const { user } = useAuth();
+  const { authUser, user } = useAuth();
   const [attendanceType, setAttendanceType] = useState<'hadir' | 'izin'>('hadir');
   const [step, setStep] = useState<'select' | 'camera' | 'permit' | 'success' | 'already'>('select');
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -465,40 +465,42 @@ const Absensi: React.FC = () => {
 
                 {/* Verification complete */}
                 {headTurnDetected && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-2xl p-6 text-center">
+                  <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+                    <div className="bg-white rounded-2xl p-6 text-center shadow-lg">
                       <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
-                      <p className="font-semibold">Verifikasi Berhasil!</p>
+                      <p className="font-semibold text-emerald-600">Verifikasi Berhasil!</p>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Camera controls */}
-              <div className="flex gap-3">
+              {/* Back button */}
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  stopCamera();
+                  setPhoto(null);
+                  resetDetection();
+                  setStep('select');
+                }}
+                className="w-full"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Kembali
+              </Button>
+
+              {!photo ? (
                 <Button
-                  variant="outline"
-                  onClick={() => {
-                    stopCamera();
-                    setPhoto(null);
-                    setStep('select');
-                  }}
-                  className="flex-1"
+                  onClick={capturePhoto}
+                  className="w-full"
+                  size="lg"
+                  disabled={!faceDetected}
                 >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Kembali
+                  <Camera className="mr-2 h-4 w-4" />
+                  {faceDetected ? 'Ambil Foto' : 'Menunggu deteksi wajah...'}
                 </Button>
-                
-                {!photo ? (
-                  <Button
-                    onClick={capturePhoto}
-                    disabled={!faceDetected}
-                    className="flex-1"
-                  >
-                    <Camera className="mr-2 h-4 w-4" />
-                    Ambil Foto
-                  </Button>
-                ) : !headTurnDetected ? (
+              ) : !headTurnDetected ? (
+                <div className="flex gap-3">
                   <Button
                     variant="outline"
                     onClick={handleRetake}
@@ -507,80 +509,13 @@ const Absensi: React.FC = () => {
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Ulangi
                   </Button>
-                ) : (
-                  <Button
-                    onClick={submitAttendance}
-                    disabled={loading}
-                    className="flex-1"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Menyimpan...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Simpan Absensi
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {step === 'permit' && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Upload Surat Izin</Label>
-                <div className="border-2 border-dashed rounded-2xl p-8 text-center">
-                  <input
-                    type="file"
-                    id="permit-file"
-                    accept="image/*,.pdf"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <label htmlFor="permit-file" className="cursor-pointer">
-                    <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium">
-                      {permitFile ? permitFile.name : 'Klik untuk upload file'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Format: JPG, PNG, PDF (Maks 5MB)
-                    </p>
-                  </label>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Keterangan (opsional)</Label>
-                <Textarea
-                  placeholder="Tuliskan keterangan izin..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setPermitFile(null);
-                    setNotes('');
-                    setStep('select');
-                  }}
-                  className="flex-1"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Kembali
-                </Button>
+              ) : (
                 <Button
                   onClick={submitAttendance}
-                  disabled={loading || !permitFile}
-                  className="flex-1"
+                  className="w-full"
+                  size="lg"
+                  disabled={loading}
                 >
                   {loading ? (
                     <>
@@ -588,10 +523,68 @@ const Absensi: React.FC = () => {
                       Menyimpan...
                     </>
                   ) : (
+                    'Konfirmasi Absensi'
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {step === 'permit' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Upload Surat Izin</Label>
+                <div className="border-2 border-dashed rounded-2xl p-8 text-center hover:border-primary/50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="permit-upload"
+                  />
+                  <label htmlFor="permit-upload" className="cursor-pointer">
+                    <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    {permitFile ? (
+                      <p className="text-sm font-medium text-foreground">{permitFile.name}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Klik untuk upload surat izin</p>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Keterangan (Opsional)</Label>
+                <Textarea
+                  placeholder="Tambahkan keterangan..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('select')}
+                  className="flex-1"
+                >
+                  Kembali
+                </Button>
+                <Button
+                  onClick={submitAttendance}
+                  className="flex-1"
+                  disabled={loading || !permitFile}
+                >
+                  {loading ? (
                     <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Kirim Izin
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Menyimpan...
                     </>
+                  ) : (
+                    'Kirim Izin'
                   )}
                 </Button>
               </div>
