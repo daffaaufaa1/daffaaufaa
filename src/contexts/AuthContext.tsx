@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithNisNit = async (nisNit: string, password: string): Promise<{ error: string | null; isAdmin?: boolean }> => {
     try {
-      // First check if it's an admin login
+      // First check if it's an admin login (401 is expected for non-admin users)
       const adminRes = await supabase.functions.invoke('admin-login', {
         body: { username: nisNit, password },
       });
@@ -143,7 +143,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (userRes.data?.success) {
-        // Sign in with Supabase Auth
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: userRes.data.email,
           password: password,
