@@ -1,1 +1,16 @@
 project_id = "tsrtcxkdjaolvrszmfut"
+
+[functions.admin-login]
+verify_jwt = false
+
+[functions.user-login]
+verify_jwt = false
+
+[functions.super-admin]
+verify_jwt = false
+
+[functions.admin-students]
+verify_jwt = false
+
+[functions.admin-teachers]
+verify_jwt = false
