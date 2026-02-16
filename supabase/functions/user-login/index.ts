@@ -49,7 +49,15 @@ serve(async (req) => {
         
         if (existingUser) {
           userId = existingUser.id;
-          await supabase.from("profiles").update({ school_id: student.school_id }).eq("user_id", userId);
+          // Sync password to auth user
+          await supabase.auth.admin.updateUserById(userId, { password });
+          // Sync profile data fully
+          await supabase.from("profiles").upsert({
+            user_id: userId,
+            full_name: student.full_name,
+            class: student.classes?.name || null,
+            school_id: student.school_id,
+          }, { onConflict: 'user_id' });
         } else {
           const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
             email,
@@ -121,7 +129,14 @@ serve(async (req) => {
         
         if (existingUser) {
           userId = existingUser.id;
-          await supabase.from("profiles").update({ school_id: teacher.school_id }).eq("user_id", userId);
+          // Sync password to auth user
+          await supabase.auth.admin.updateUserById(userId, { password });
+          // Sync profile data fully
+          await supabase.from("profiles").upsert({
+            user_id: userId,
+            full_name: teacher.full_name,
+            school_id: teacher.school_id,
+          }, { onConflict: 'user_id' });
         } else {
           const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
             email,
